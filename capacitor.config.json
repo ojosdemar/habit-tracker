@@ -1,0 +1,9 @@
+{
+  "appId": "com.habittracker.app",
+  "appName": "Habit Tracker",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "minWebViewVersion": 55
+  }
+}
