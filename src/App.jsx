@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Moon, Sun, BarChart3, Award, Flame, X } from 'lucide-react';
+import { Plus, Trash2, Moon, Sun, BarChart3, Award, Flame, X, Check, Calendar } from 'lucide-react';
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
@@ -8,6 +8,7 @@ export default function HabitTracker() {
   const [newHabit, setNewHabit] = useState({ name: '', category: 'Учёба' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const [expandedHabit, setExpandedHabit] = useState(null);
 
   const categories = ['Учёба', 'Здоровье', 'Спорт', 'Работа', 'Личное'];
   const categoryIcons = {
@@ -51,7 +52,7 @@ export default function HabitTracker() {
   };
 
   const deleteHabit = (id) => {
-    if (confirm('Удалить эту привычку?')) {
+    if (window.confirm('Удалить эту привычку?')) {
       setHabits(habits.filter(h => h.id !== id));
     }
   };
@@ -75,6 +76,11 @@ export default function HabitTracker() {
     }));
   };
 
+  const toggleTodayCompletion = (habitId) => {
+    const today = new Date();
+    toggleCompletion(habitId, today);
+  };
+
   const getCurrentMonthDays = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -91,6 +97,11 @@ export default function HabitTracker() {
   const isCompletedOnDate = (habit, date) => {
     const dateStr = date.toDateString();
     return (habit.completedDates || []).includes(dateStr);
+  };
+
+  const isCompletedToday = (habit) => {
+    const today = new Date().toDateString();
+    return (habit.completedDates || []).includes(today);
   };
 
   const getStreak = (habit) => {
@@ -126,7 +137,7 @@ export default function HabitTracker() {
       day <= today && isCompletedOnDate(habit, day)
     ).length;
     
-    return Math.round((completedInMonth / daysPassedInMonth) * 100);
+    return daysPassedInMonth > 0 ? Math.round((completedInMonth / daysPassedInMonth) * 100) : 0;
   };
 
   const stats = {
@@ -151,7 +162,7 @@ export default function HabitTracker() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Header - Mobile Optimized */}
+      {/* Header */}
       <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-10`}>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
@@ -174,7 +185,7 @@ export default function HabitTracker() {
               </button>
               <button
                 onClick={() => {
-                  if (confirm('Выйти и очистить все данные?')) {
+                  if (window.confirm('Выйти и очистить все данные?')) {
                     localStorage.clear();
                     window.location.reload();
                   }
@@ -250,11 +261,11 @@ export default function HabitTracker() {
         </div>
       )}
 
-      <div className="px-4 py-4 pb-20">
+      <div className="px-4 py-4 pb-24">
         {/* Welcome Section */}
         <div className="mb-4">
           <h2 className="text-2xl font-bold mb-1">
-            Добро пожаловать, {userName || 'Алла'}!
+            Добро пожаловать, {userName || 'Друг'}!
           </h2>
           <p className="text-sm text-gray-400">Отслеживайте свои привычки и достигайте целей</p>
         </div>
@@ -264,7 +275,7 @@ export default function HabitTracker() {
           <p className="text-base font-medium">{currentMessage}</p>
         </div>
 
-        {/* Stats - Mobile Grid */}
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-3`}>
             <div className={`w-10 h-10 rounded-xl ${isDark ? 'bg-blue-900' : 'bg-blue-100'} flex items-center justify-center mb-2 mx-auto`}>
@@ -299,70 +310,123 @@ export default function HabitTracker() {
         {/* Habits List */}
         {habits.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400 mb-6">Пока нет привычек</p>
+            <div className="text-6xl mb-4">📝</div>
+            <p className="text-gray-400 text-lg mb-2">Пока нет привычек</p>
+            <p className="text-gray-500 text-sm">Нажмите + чтобы добавить первую</p>
           </div>
         ) : (
           <div className="space-y-3 mb-4">
-            {habits.map(habit => (
-              <div key={habit.id} className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="text-2xl">{categoryIcons[habit.category]}</span>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{habit.name}</h4>
-                      <p className="text-xs text-gray-400">{habit.category}</p>
+            {habits.map(habit => {
+              const isExpanded = expandedHabit === habit.id;
+              const completedToday = isCompletedToday(habit);
+              const streak = getStreak(habit);
+              const completion = getMonthlyCompletion(habit);
+              
+              return (
+                <div key={habit.id} className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl overflow-hidden`}>
+                  {/* Main Content */}
+                  <div className="p-4">
+                    {/* Header with icon and title */}
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="text-3xl">{categoryIcons[habit.category]}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-base mb-1">{habit.name}</h4>
+                        <p className="text-xs text-gray-400">{habit.category}</p>
+                      </div>
+                      <button
+                        onClick={() => deleteHabit(habit.id)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 mb-3 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Flame className="w-4 h-4 text-orange-500" />
+                        <span className="text-gray-400">Серия:</span>
+                        <span className="font-bold text-orange-500">{streak} дней</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-400">За месяц:</span>
+                        <span className="font-bold text-blue-500">{completion}%</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mb-4 overflow-hidden`}>
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                        style={{width: `${completion}%`}}
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleTodayCompletion(habit.id)}
+                        className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                          completedToday 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        <Check className="w-5 h-5" />
+                        {completedToday ? 'Выполнено сегодня' : 'Отметить сегодня'}
+                      </button>
+                      
+                      <button
+                        onClick={() => setExpandedHabit(isExpanded ? null : habit.id)}
+                        className={`px-4 py-3 rounded-xl font-medium text-sm flex items-center gap-2 ${
+                          isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        <Calendar className="w-5 h-5" />
+                        {isExpanded ? 'Скрыть' : 'Календарь'}
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => deleteHabit(habit.id)}
-                    className="text-gray-400 p-1 flex-shrink-0"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
 
-                <div className="flex items-center gap-4 mb-3 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Flame className="w-4 h-4 text-orange-500" />
-                    <span className="text-gray-400">Серия</span>
-                    <span className="font-bold text-orange-500">{getStreak(habit)}</span>
-                  </div>
-                  <div className="text-gray-400">
-                    За месяц: <span className="text-blue-500 font-medium">{getMonthlyCompletion(habit)}%</span>
-                  </div>
+                  {/* Expanded Calendar View */}
+                  {isExpanded && (
+                    <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} p-4`}>
+                      <h5 className="text-sm font-medium mb-3 text-gray-400">
+                        Календарь на {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                      </h5>
+                      
+                      {/* Calendar Grid */}
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {monthDays.map((day, idx) => {
+                          const isCompleted = isCompletedOnDate(habit, day);
+                          const isToday = day.toDateString() === new Date().toDateString();
+                          const isPast = day < new Date().setHours(0, 0, 0, 0);
+                          
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => toggleCompletion(habit.id, day)}
+                              className={`
+                                aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all
+                                ${isCompleted 
+                                  ? 'bg-green-500 text-white' 
+                                  : isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                                }
+                                ${isToday ? 'ring-2 ring-blue-500' : ''}
+                                ${isPast && !isCompleted && !isToday ? 'opacity-40' : ''}
+                                active:scale-95
+                              `}
+                            >
+                              {day.getDate()}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                <div className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full h-2 mb-3`}>
-                  <div 
-                    className="bg-blue-500 h-2 rounded-full transition-all"
-                    style={{width: `${getMonthlyCompletion(habit)}%`}}
-                  />
-                </div>
-
-                {/* Calendar Grid - Mobile Optimized */}
-                <div className="grid grid-cols-7 gap-1">
-                  {monthDays.map((day, idx) => {
-                    const isCompleted = isCompletedOnDate(habit, day);
-                    const isToday = day.toDateString() === new Date().toDateString();
-                    
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => toggleCompletion(habit.id, day)}
-                        className={`
-                          aspect-square rounded-lg flex items-center justify-center text-xs font-medium
-                          ${isCompleted ? 'bg-green-500 text-white' : isDark ? 'bg-gray-700' : 'bg-gray-200'}
-                          ${isToday ? 'ring-2 ring-blue-500' : ''}
-                          active:scale-95 transition-transform
-                        `}
-                      >
-                        {day.getDate()}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -370,9 +434,9 @@ export default function HabitTracker() {
       {/* Floating Action Button */}
       <button
         onClick={() => setShowAddForm(true)}
-        className="fixed right-4 bottom-4 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform z-20"
+        className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-20"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-7 h-7" />
       </button>
     </div>
   );
