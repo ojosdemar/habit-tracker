@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Moon, Sun, BarChart3, Award, Flame, X, Check, Calendar } from 'lucide-react';
+import { Plus, Trash2, Moon, Sun, BarChart3, Award, Flame, X, Check, Calendar, Bell, Clock } from 'lucide-react';
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
@@ -9,6 +9,8 @@ export default function HabitTracker() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [expandedHabit, setExpandedHabit] = useState(null);
+  const [editingNotification, setEditingNotification] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const categories = ['Учёба', 'Здоровье', 'Спорт', 'Работа', 'Личное'];
   const categoryIcons = {
@@ -18,6 +20,16 @@ export default function HabitTracker() {
     'Работа': '💼',
     'Личное': '✨'
   };
+
+  const weekDays = [
+    { short: 'ПН', full: 'Понедельник', value: 1 },
+    { short: 'ВТ', full: 'Вторник', value: 2 },
+    { short: 'СР', full: 'Среда', value: 3 },
+    { short: 'ЧТ', full: 'Четверг', value: 4 },
+    { short: 'ПТ', full: 'Пятница', value: 5 },
+    { short: 'СБ', full: 'Суббота', value: 6 },
+    { short: 'ВС', full: 'Воскресенье', value: 0 }
+  ];
 
   useEffect(() => {
     const savedHabits = localStorage.getItem('habits');
@@ -43,7 +55,12 @@ export default function HabitTracker() {
       name: newHabit.name,
       category: newHabit.category,
       completedDates: [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      notifications: {
+        enabled: false,
+        time: '09:00',
+        days: [1, 2, 3, 4, 5, 6, 0]
+      }
     };
     
     setHabits([...habits, habit]);
@@ -52,9 +69,30 @@ export default function HabitTracker() {
   };
 
   const deleteHabit = (id) => {
-    if (window.confirm('Удалить эту привычку?')) {
-      setHabits(habits.filter(h => h.id !== id));
-    }
+    setConfirmDelete(id);
+  };
+
+  const updateHabitNotifications = (habitId, notifications) => {
+    setHabits(habits.map(habit => 
+      habit.id === habitId 
+        ? { ...habit, notifications } 
+        : habit
+    ));
+  };
+
+  const toggleNotificationDay = (habitId, dayValue) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit) return;
+
+    const currentDays = habit.notifications?.days || [];
+    const newDays = currentDays.includes(dayValue)
+      ? currentDays.filter(d => d !== dayValue)
+      : [...currentDays, dayValue];
+
+    updateHabitNotifications(habitId, {
+      ...habit.notifications,
+      days: newDays
+    });
   };
 
   const toggleCompletion = (habitId, date) => {
@@ -162,8 +200,7 @@ export default function HabitTracker() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Header */}
-      <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-10`}>
+      <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-50`}>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -185,12 +222,12 @@ export default function HabitTracker() {
               </button>
               <button
                 onClick={() => {
-                  if (window.confirm('Выйти и очистить все данные?')) {
-                    localStorage.clear();
-                    window.location.reload();
-                  }
+                  localStorage.clear();
+                  setUserName('');
+                  setHabits([]);
+                  setShowNameInput(true);
                 }}
-                className="text-sm text-gray-400 px-2"
+                className="text-sm text-gray-400 hover:text-white px-2"
               >
                 Выход
               </button>
@@ -199,9 +236,8 @@ export default function HabitTracker() {
         </div>
       </header>
 
-      {/* Name Input Modal */}
       {showNameInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 w-full max-w-sm`}>
             <h2 className="text-xl font-bold mb-4">Как вас зовут?</h2>
             <input
@@ -224,9 +260,36 @@ export default function HabitTracker() {
         </div>
       )}
 
-      {/* Add Habit Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 w-full max-w-sm`}>
+            <h2 className="text-xl font-bold mb-2">Удалить привычку?</h2>
+            <p className="text-gray-400 mb-6">
+              {habits.find(h => h.id === confirmDelete)?.name}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setHabits(habits.filter(h => h.id !== confirmDelete));
+                  setConfirmDelete(null);
+                }}
+                className="flex-1 bg-red-500 text-white py-3 rounded-xl font-medium hover:bg-red-600"
+              >
+                Удалить
+              </button>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className={`flex-1 ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} py-3 rounded-xl font-medium`}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold">Новая привычка</h3>
@@ -261,8 +324,118 @@ export default function HabitTracker() {
         </div>
       )}
 
+      {editingNotification && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">⏰ Напоминания</h3>
+              <button onClick={() => setEditingNotification(null)} className="p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-xl p-4 mb-4`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5 text-blue-500" />
+                  <span className="font-medium">Включить уведомления</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const habit = habits.find(h => h.id === editingNotification);
+                    updateHabitNotifications(editingNotification, {
+                      ...habit.notifications,
+                      enabled: !habit.notifications.enabled
+                    });
+                  }}
+                  className={`w-14 h-7 rounded-full transition-all relative flex items-center p-1 ${
+                    habits.find(h => h.id === editingNotification)?.notifications?.enabled
+                      ? 'bg-blue-500'
+                      : 'bg-gray-500'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+                    habits.find(h => h.id === editingNotification)?.notifications?.enabled
+                      ? 'translate-x-7'
+                      : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            {habits.find(h => h.id === editingNotification)?.notifications?.enabled && (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Время напоминания
+                  </label>
+                  <input
+                    type="time"
+                    value={habits.find(h => h.id === editingNotification)?.notifications?.time || '09:00'}
+                    onChange={(e) => {
+                      const habit = habits.find(h => h.id === editingNotification);
+                      updateHabitNotifications(editingNotification, {
+                        ...habit.notifications,
+                        time: e.target.value
+                      });
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none text-base`}
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-3">Дни недели</label>
+                  <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map(day => {
+                      const habit = habits.find(h => h.id === editingNotification);
+                      const isSelected = habit?.notifications?.days?.includes(day.value);
+                      
+                      return (
+                        <button
+                          key={day.value}
+                          onClick={() => toggleNotificationDay(editingNotification, day.value)}
+                          className={`aspect-square rounded-xl font-medium text-sm transition-all ${
+                            isSelected
+                              ? 'bg-blue-500 text-white'
+                              : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
+                          }`}
+                        >
+                          {day.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} rounded-xl p-4 border-2 border-blue-500/30`}>
+                  <p className="text-sm text-gray-400 mb-2">Превью уведомления:</p>
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🔔</div>
+                    <div>
+                      <p className="font-medium mb-1">
+                        {habits.find(h => h.id === editingNotification)?.name}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Пора выполнить привычку! 💪
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => setEditingNotification(null)}
+              className="w-full mt-4 bg-blue-500 text-white py-3 rounded-xl font-medium"
+            >
+              Готово
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-4 pb-24">
-        {/* Welcome Section */}
         <div className="mb-4">
           <h2 className="text-2xl font-bold mb-1">
             Добро пожаловать, {userName || 'Друг'}!
@@ -270,12 +443,10 @@ export default function HabitTracker() {
           <p className="text-sm text-gray-400">Отслеживайте свои привычки и достигайте целей</p>
         </div>
 
-        {/* Motivational Message */}
         <div className={`${isDark ? 'bg-gradient-to-r from-blue-900 to-purple-900' : 'bg-gradient-to-r from-blue-100 to-purple-100'} rounded-2xl p-4 mb-4 text-center`}>
           <p className="text-base font-medium">{currentMessage}</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-3`}>
             <div className={`w-10 h-10 rounded-xl ${isDark ? 'bg-blue-900' : 'bg-blue-100'} flex items-center justify-center mb-2 mx-auto`}>
@@ -302,12 +473,10 @@ export default function HabitTracker() {
           </div>
         </div>
 
-        {/* Section Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold">Мои привычки</h3>
         </div>
 
-        {/* Habits List */}
         {habits.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📝</div>
@@ -321,27 +490,33 @@ export default function HabitTracker() {
               const completedToday = isCompletedToday(habit);
               const streak = getStreak(habit);
               const completion = getMonthlyCompletion(habit);
+              const notificationsEnabled = habit.notifications?.enabled;
               
               return (
                 <div key={habit.id} className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl overflow-hidden`}>
-                  {/* Main Content */}
                   <div className="p-4">
-                    {/* Header with icon and title */}
                     <div className="flex items-start gap-3 mb-3">
                       <div className="text-3xl">{categoryIcons[habit.category]}</div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-base mb-1">{habit.name}</h4>
-                        <p className="text-xs text-gray-400">{habit.category}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-400">{habit.category}</p>
+                          {notificationsEnabled && (
+                            <span className="flex items-center gap-1 text-xs text-blue-400">
+                              <Bell className="w-3 h-3" />
+                              {habit.notifications.time}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => deleteHabit(habit.id)}
-                        className="text-gray-400 hover:text-red-500 p-1"
+                        className="text-gray-400 hover:text-red-500 p-2 -m-1 flex-shrink-0"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-6 h-6" />
                       </button>
                     </div>
 
-                    {/* Stats */}
                     <div className="flex items-center gap-4 mb-3 text-sm">
                       <div className="flex items-center gap-1.5">
                         <Flame className="w-4 h-4 text-orange-500" />
@@ -354,7 +529,6 @@ export default function HabitTracker() {
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
                     <div className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mb-4 overflow-hidden`}>
                       <div 
                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
@@ -362,40 +536,48 @@ export default function HabitTracker() {
                       />
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => toggleTodayCompletion(habit.id)}
-                        className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                        className={`col-span-2 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
                           completedToday 
                             ? 'bg-green-500 text-white' 
                             : 'bg-blue-500 text-white hover:bg-blue-600'
                         }`}
                       >
                         <Check className="w-5 h-5" />
-                        {completedToday ? 'Выполнено сегодня' : 'Отметить сегодня'}
+                        {completedToday ? 'Выполнено' : 'Отметить'}
                       </button>
                       
                       <button
-                        onClick={() => setExpandedHabit(isExpanded ? null : habit.id)}
-                        className={`px-4 py-3 rounded-xl font-medium text-sm flex items-center gap-2 ${
-                          isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                        onClick={() => setEditingNotification(habit.id)}
+                        className={`px-3 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-1 ${
+                          notificationsEnabled
+                            ? 'bg-blue-500 text-white'
+                            : isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
                         }`}
                       >
-                        <Calendar className="w-5 h-5" />
-                        {isExpanded ? 'Скрыть' : 'Календарь'}
+                        <Bell className="w-4 h-4" />
                       </button>
                     </div>
+
+                    <button
+                      onClick={() => setExpandedHabit(isExpanded ? null : habit.id)}
+                      className={`w-full mt-2 py-2 rounded-xl font-medium text-sm flex items-center justify-center gap-2 ${
+                        isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      {isExpanded ? 'Скрыть календарь' : 'Показать календарь'}
+                    </button>
                   </div>
 
-                  {/* Expanded Calendar View */}
                   {isExpanded && (
                     <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} p-4`}>
                       <h5 className="text-sm font-medium mb-3 text-gray-400">
                         Календарь на {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
                       </h5>
                       
-                      {/* Calendar Grid */}
                       <div className="grid grid-cols-7 gap-1.5">
                         {monthDays.map((day, idx) => {
                           const isCompleted = isCompletedOnDate(habit, day);
@@ -431,10 +613,9 @@ export default function HabitTracker() {
         )}
       </div>
 
-      {/* Floating Action Button */}
       <button
         onClick={() => setShowAddForm(true)}
-        className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-20"
+        className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40"
       >
         <Plus className="w-7 h-7" />
       </button>
