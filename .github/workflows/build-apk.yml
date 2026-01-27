@@ -36,11 +36,11 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Copy web assets to Android
-        run: npx cap copy android
+      - name: Add Android platform
+        run: npx cap add android
       
-      - name: Update Android project
-        run: npx cap update android
+      - name: Sync Capacitor
+        run: npx cap sync android
       
       - name: Make gradlew executable
         run: chmod +x android/gradlew
