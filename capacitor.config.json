@@ -4,6 +4,14 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "android": {
-    "minWebViewVersion": 55
+    "minWebViewVersion": 55,
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#488AFF",
+      "sound": "beep.wav"
+    }
   }
 }
