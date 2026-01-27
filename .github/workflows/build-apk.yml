@@ -36,12 +36,6 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Initialize Capacitor
-        run: npx cap init "Habit Tracker" "com.habittracker.app" --web-dir=dist
-      
-      - name: Add Android platform
-        run: npx cap add android
-      
       - name: Copy web assets to Android
         run: npx cap copy android
       
