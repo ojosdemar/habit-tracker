@@ -11,6 +11,7 @@ export default function HabitTracker() {
   const [expandedHabit, setExpandedHabit] = useState(null);
   const [editingNotification, setEditingNotification] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [notificationsSupported, setNotificationsSupported] = useState(false);
 
   const categories = ['Учёба', 'Здоровье', 'Спорт', 'Работа', 'Личное'];
   const categoryIcons = {
@@ -37,15 +38,85 @@ export default function HabitTracker() {
     if (savedHabits) setHabits(JSON.parse(savedHabits));
     if (savedName) setUserName(savedName);
     else setShowNameInput(true);
+    
+    checkNotificationSupport();
   }, []);
 
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits));
+    scheduleAllNotifications();
   }, [habits]);
 
   useEffect(() => {
     if (userName) localStorage.setItem('userName', userName);
   }, [userName]);
+
+  const checkNotificationSupport = async () => {
+    try {
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+        const { LocalNotifications } = window.Capacitor.Plugins;
+        const permission = await LocalNotifications.checkPermissions();
+        
+        if (permission.display === 'granted') {
+          setNotificationsSupported(true);
+          console.log('Notifications supported: true');
+        } else if (permission.display === 'prompt') {
+          const result = await LocalNotifications.requestPermissions();
+          setNotificationsSupported(result.display === 'granted');
+          console.log('Notifications permission:', result.display);
+        }
+      } else {
+        console.log('Capacitor LocalNotifications not available');
+      }
+    } catch (error) {
+      console.log('Notifications not supported:', error);
+      setNotificationsSupported(false);
+    }
+  };
+
+  const scheduleAllNotifications = async () => {
+    if (!notificationsSupported || !window.Capacitor) return;
+    
+    try {
+      const { LocalNotifications } = window.Capacitor.Plugins;
+      
+      await LocalNotifications.cancel({ notifications: habits.map(h => ({ id: h.id })) });
+      
+      const notificationsToSchedule = [];
+      
+      habits.forEach(habit => {
+        if (habit.notifications && habit.notifications.enabled) {
+          habit.notifications.days.forEach(dayOfWeek => {
+            const [hours, minutes] = habit.notifications.time.split(':');
+            
+            notificationsToSchedule.push({
+              id: habit.id * 10 + dayOfWeek,
+              title: habit.name,
+              body: 'Пора выполнить привычку! 💪',
+              schedule: {
+                on: {
+                  hour: parseInt(hours),
+                  minute: parseInt(minutes),
+                  weekday: dayOfWeek === 0 ? 7 : dayOfWeek
+                },
+                allowWhileIdle: true
+              },
+              sound: 'default',
+              actionTypeId: '',
+              extra: { habitId: habit.id }
+            });
+          });
+        }
+      });
+      
+      if (notificationsToSchedule.length > 0) {
+        await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+        console.log('Scheduled', notificationsToSchedule.length, 'notifications');
+      }
+    } catch (error) {
+      console.error('Error scheduling notifications:', error);
+    }
+  };
 
   const addHabit = () => {
     if (!newHabit.name.trim()) return;
@@ -72,10 +143,14 @@ export default function HabitTracker() {
     setConfirmDelete(id);
   };
 
-  const updateHabitNotifications = (habitId, notifications) => {
+  const updateHabitNotifications = async (habitId, notifications) => {
     setHabits(habits.map(habit => 
       habit.id === habitId ? { ...habit, notifications } : habit
     ));
+    
+    if (notifications.enabled && !notificationsSupported) {
+      await checkNotificationSupport();
+    }
   };
 
   const toggleNotificationDay = (habitId, dayValue) => {
@@ -261,6 +336,13 @@ export default function HabitTracker() {
               <h3 className="text-xl font-bold">⏰ Напоминания</h3>
               <button onClick={() => setEditingNotification(null)} className="p-2"><X className="w-6 h-6" /></button>
             </div>
+            
+            {!notificationsSupported && (
+              <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-xl p-4 mb-4">
+                <p className="text-sm">⚠️ Уведомления работают только в мобильном приложении (APK). В браузере они не поддерживаются.</p>
+              </div>
+            )}
+            
             <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-xl p-4 mb-4`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -272,6 +354,7 @@ export default function HabitTracker() {
                 </button>
               </div>
             </div>
+            
             {habits.find(h => h.id === editingNotification)?.notifications?.enabled && (
               <div>
                 <div className="mb-4">
@@ -421,28 +504,6 @@ export default function HabitTracker() {
                           const isCompleted = isCompletedOnDate(habit, day);
                           const isToday = day.toDateString() === new Date().toDateString();
                           const isPast = day < new Date().setHours(0, 0, 0, 0);
-                          const bgColor = isCompleted ? 'bg-green-500 text-white' : isDark ? 'bg-gray-700' : 'bg-gray-200';
-                          const ringClass = isToday ? 'ring-2 ring-blue-500' : '';
-                          const opacityClass = isPast && !isCompleted && !isToday ? 'opacity-40' : '';
                           
                           return (
-                            <button key={idx} onClick={() => toggleCompletion(habit.id, day)} className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all ${bgColor} ${ringClass} ${opacityClass}`}>
-                              {day.getDate()}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <button onClick={() => setShowAddForm(true)} className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40">
-        <Plus className="w-7 h-7" />
-      </button>
-    </div>
-  );
-}
+                            <button key={idx} onClick={() => toggleCompletion(habit.id, day
