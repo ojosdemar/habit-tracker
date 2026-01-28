@@ -506,4 +506,23 @@ export default function HabitTracker() {
                           const isPast = day < new Date().setHours(0, 0, 0, 0);
                           
                           return (
-                            <button key={idx} onClick={() => toggleCompletion(habit.id, day
+                            <button key={idx} onClick={() => toggleCompletion(habit.id, day)} className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all ${isCompleted ? 'bg-green-500 text-white' : isDark ? 'bg-gray-700' : 'bg-gray-200'} ${isToday ? 'ring-2 ring-blue-500' : ''} ${isPast && !isCompleted && !isToday ? 'opacity-40' : ''}`}>
+                              {day.getDate()}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <button onClick={() => setShowAddForm(true)} className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40">
+        <Plus className="w-7 h-7" />
+      </button>
+    </div>
+  );
+}
