@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    minify: 'terser',
+    sourcemap: false
+  },
+  server: {
+    port: 3000,
+    host: true
   }
 });
