@@ -138,14 +138,16 @@ jobs:
       working-directory: android
       run: ./gradlew assembleRelease
 
-    - name: Verify APK exists
-      run: ls -la android/app/build/outputs/apk/release/
+    - name: Rename APK with proper name
+      run: |
+        mkdir -p output
+        cp android/app/build/outputs/apk/release/app-release.apk output/HabitTracker-v1.0.${{ github.run_number }}.apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: habit-tracker-signed
-        path: android/app/build/outputs/apk/release/app-release.apk
+        name: HabitTracker-APK
+        path: output/HabitTracker-v1.0.${{ github.run_number }}.apk
         retention-days: 30
 
     - name: Create Release
@@ -153,8 +155,18 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.${{ github.run_number }}
-        name: Release v1.0.${{ github.run_number }}
-        files: android/app/build/outputs/apk/release/app-release.apk
+        name: Habit Tracker v1.0.${{ github.run_number }}
+        body: |
+          ## 📱 Habit Tracker APK
+          
+          Скачайте и установите APK на ваш Android телефон.
+          
+          ### Установка:
+          1. Скачайте APK файл
+          2. Откройте файл на телефоне
+          3. Разрешите установку из неизвестных источников (если требуется)
+          4. Нажмите "Установить"
+        files: output/HabitTracker-v1.0.${{ github.run_number }}.apk
         draft: false
         prerelease: false
       env:
