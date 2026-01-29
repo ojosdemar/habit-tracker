@@ -44,6 +44,93 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
+    - name: Generate Debug Keystore
+      run: |
+        mkdir -p android/app
+        keytool -genkeypair -v -keystore android/app/debug.keystore \
+          -alias androiddebugkey \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -storepass android -keypass android \
+          -dname "CN=Android Debug,O=Android,C=US"
+
+    - name: Create keystore.properties
+      run: |
+        echo "storeFile=debug.keystore" > android/keystore.properties
+        echo "storePassword=android" >> android/keystore.properties
+        echo "keyAlias=androiddebugkey" >> android/keystore.properties
+        echo "keyPassword=android" >> android/keystore.properties
+
+    - name: Update build.gradle for signing
+      run: |
+        cat > android/app/build.gradle << 'EOF'
+        plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            namespace "com.habittracker.app"
+            compileSdk rootProject.ext.compileSdkVersion
+            defaultConfig {
+                applicationId "com.habittracker.app"
+                minSdkVersion rootProject.ext.minSdkVersion
+                targetSdkVersion rootProject.ext.targetSdkVersion
+                versionCode 1
+                versionName "1.0"
+            }
+            
+            signingConfigs {
+                debug {
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
+                }
+                release {
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
+                }
+            }
+            
+            buildTypes {
+                release {
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                    signingConfig signingConfigs.release
+                }
+                debug {
+                    signingConfig signingConfigs.debug
+                }
+            }
+        }
+
+        repositories {
+            flatDir{
+                dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+            }
+        }
+
+        dependencies {
+            implementation fileTree(include: ['*.jar'], dir: 'libs')
+            implementation project(':capacitor-android')
+            implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+            implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+            implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+        }
+
+        apply from: 'capacitor.build.gradle'
+
+        try {
+            def servicesJSON = file('google-services.json')
+            if (servicesJSON.text) {
+                apply plugin: 'com.google.gms.google-services'
+            }
+        } catch(Exception e) {
+            logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+        }
+        EOF
+
     - name: Make gradlew executable
       run: chmod +x android/gradlew
 
@@ -51,21 +138,17 @@ jobs:
       working-directory: android
       run: ./gradlew assembleRelease
 
+    - name: Verify APK exists
+      run: ls -la android/app/build/outputs/apk/release/
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: habit-tracker-release
-        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+        name: habit-tracker-signed
+        path: android/app/build/outputs/apk/release/app-release.apk
         retention-days: 30
 
     - name: Create Release
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.${{ github.run_number }}
-        name: Release v1.0.${{ github.run_number }}
-        files: android/app/build/outputs/apk/release/app-release-unsigned.apk
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      w
