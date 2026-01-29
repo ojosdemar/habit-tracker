@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Moon, Sun, Award, Flame, X, Check, Calendar, Trophy, Target, Zap } from 'lucide-react';
+import { Plus, Trash2, Moon, Sun, Award, Flame, X, Check, Calendar, Trophy, Target, Zap, Edit2 } from 'lucide-react';
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
@@ -11,6 +11,8 @@ export default function HabitTracker() {
   const [expandedHabit, setExpandedHabit] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', category: '', color: '' });
 
   const categories = ['Учёба', 'Здоровье', 'Спорт', 'Работа', 'Личное'];
   const categoryIcons = {
@@ -61,6 +63,33 @@ export default function HabitTracker() {
     setHabits([...habits, habit]);
     setNewHabit({ name: '', category: 'Учёба', color: '#667eea' });
     setShowAddForm(false);
+  };
+
+  const startEditHabit = (habit) => {
+    setEditingHabit(habit.id);
+    setEditForm({
+      name: habit.name,
+      category: habit.category,
+      color: habit.color
+    });
+  };
+
+  const saveEditHabit = () => {
+    if (!editForm.name.trim()) return;
+    
+    setHabits(habits.map(habit => 
+      habit.id === editingHabit 
+        ? { ...habit, name: editForm.name, category: editForm.category, color: editForm.color }
+        : habit
+    ));
+    
+    setEditingHabit(null);
+    setEditForm({ name: '', category: '', color: '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingHabit(null);
+    setEditForm({ name: '', category: '', color: '' });
   };
 
   const deleteHabit = (id) => {
@@ -283,6 +312,48 @@ export default function HabitTracker() {
         </div>
       )}
 
+      {editingHabit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Редактировать привычку</h3>
+              <button onClick={cancelEdit} className="p-2"><X className="w-6 h-6" /></button>
+            </div>
+            <input 
+              type="text" 
+              value={editForm.name} 
+              onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
+              placeholder="Название привычки" 
+              className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none text-base`} 
+              autoFocus 
+            />
+            <select 
+              value={editForm.category} 
+              onChange={(e) => setEditForm({...editForm, category: e.target.value})} 
+              className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none text-base`}
+            >
+              {categories.map(cat => <option key={cat} value={cat}>{categoryIcons[cat]} {cat}</option>)}
+            </select>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Цвет привычки</label>
+              <div className="grid grid-cols-6 gap-2">
+                {habitColors.map(color => (
+                  <button 
+                    key={color.value} 
+                    onClick={() => setEditForm({...editForm, color: color.value})} 
+                    className={`w-full aspect-square rounded-lg transition-all ${editForm.color === color.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`} 
+                    style={{backgroundColor: color.value}} 
+                  />
+                ))}
+              </div>
+            </div>
+            <button onClick={saveEditHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base">
+              Сохранить изменения
+            </button>
+          </div>
+        </div>
+      )}
+
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg`}>
@@ -377,9 +448,14 @@ export default function HabitTracker() {
                         <h4 className="font-semibold text-base mb-1">{habit.name}</h4>
                         <p className="text-xs text-gray-400">{habit.category}</p>
                       </div>
-                      <button onClick={() => deleteHabit(habit.id)} className="text-gray-400 hover:text-red-500 p-2 -m-1">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex gap-1">
+                        <button onClick={() => startEditHabit(habit)} className="text-gray-400 hover:text-blue-500 p-2 -m-1">
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => deleteHabit(habit.id)} className="text-gray-400 hover:text-red-500 p-2 -m-1">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4 mb-3 text-sm">
                       <div className="flex items-center gap-1.5">
