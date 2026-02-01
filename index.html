@@ -130,17 +130,26 @@
                     
                     console.log('Exporting data:', data);
                     
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const jsonStr = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
+                    const fileName = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = fileName;
                     document.body.appendChild(a);
                     a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
                     
-                    alert('✅ Экспорт выполнен!');
+                    // Небольшая задержка перед очисткой
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                    // Показываем где искать файл
+                    setTimeout(() => {
+                        alert(`✅ Файл сохранён!\n\nИмя файла:\n${fileName}\n\nГде искать:\n📁 Загрузки (Downloads)\n📁 Файлы → Загрузки\n\nИли откройте уведомление о загрузке`);
+                    }, 300);
                 } catch (err) {
                     console.error('Export error:', err);
                     alert('❌ Ошибка экспорта: ' + err.message);
@@ -372,7 +381,10 @@
                                                 <input type="file" accept=".json" onChange={importData} className="hidden" />
                                             </label>
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-2">💡 Сохраняйте резервную копию перед переустановкой!</p>
+                                        <p className="text-xs text-gray-400 mt-2">
+                                            💡 <strong>Экспорт:</strong> файл сохраняется в папку Загрузки<br/>
+                                            📂 <strong>Найти:</strong> Файлы → Загрузки → habit-tracker-backup-ГГГГ-ММ-ДД.json
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -391,11 +403,22 @@
                                 <div className="space-y-4 text-sm">
                                     <div>
                                         <h4 className="font-bold mb-2">💾 Резервное копирование</h4>
-                                        <ol className="list-decimal list-inside space-y-1 text-gray-400">
-                                            <li>Нажмите "Настройки" → "Экспорт данных"</li>
-                                            <li>Сохраните JSON файл</li>
-                                            <li>При переустановке: "Импорт данных" → выберите файл</li>
-                                        </ol>
+                                        <div className="space-y-2 text-gray-400">
+                                            <p className="font-semibold text-white">Экспорт:</p>
+                                            <ol className="list-decimal list-inside space-y-1 ml-2">
+                                                <li>Нажмите "Настройки" → "Экспорт"</li>
+                                                <li>Файл сохранится в папку <strong>Загрузки</strong></li>
+                                                <li>Откройте уведомление о загрузке</li>
+                                                <li>Или найдите в: Файлы → Загрузки</li>
+                                            </ol>
+                                            <p className="font-semibold text-white mt-3">Импорт:</p>
+                                            <ol className="list-decimal list-inside space-y-1 ml-2">
+                                                <li>Нажмите "Настройки" → "Импорт"</li>
+                                                <li>Выберите JSON файл из Загрузок</li>
+                                                <li>Данные восстановятся</li>
+                                            </ol>
+                                            <p className="text-xs mt-2">⚠️ Импорт заменит все текущие привычки!</p>
+                                        </div>
                                     </div>
 
                                     <div>
