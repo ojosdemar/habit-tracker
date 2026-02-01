@@ -61,6 +61,17 @@
             const [showSettings, setShowSettings] = useState(false);
             const [showHelp, setShowHelp] = useState(false);
             const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
+            const [editingHabit, setEditingHabit] = useState(null);
+            const [editForm, setEditForm] = useState({
+                name: '',
+                category: 'Учёба',
+                color: '#667eea',
+                metricType: 'check',
+                targetValue: 1,
+                unit: '',
+                frequency: 'daily',
+                selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+            });
             
             const [settings, setSettings] = useState({
                 // Убрали Telegram настройки
@@ -111,8 +122,9 @@
 
             const exportData = () => {
                 const data = {
-                    habits,
-                    exportDate: new Date().toISOString()
+                    habits: habits || [],
+                    exportDate: new Date().toISOString(),
+                    version: '2.0'
                 };
                 
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -120,7 +132,9 @@
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             };
 
@@ -165,6 +179,39 @@
             const deleteHabit = () => {
                 setHabits(habits.filter(h => h.id !== confirmDelete));
                 setConfirmDelete(null);
+            };
+
+            const openEditModal = (habit) => {
+                setEditingHabit(habit.id);
+                setEditForm({
+                    name: habit.name,
+                    category: habit.category,
+                    color: habit.color,
+                    metricType: habit.metricType,
+                    targetValue: habit.targetValue,
+                    unit: habit.unit || '',
+                    frequency: habit.frequency,
+                    selectedDays: habit.selectedDays || ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                });
+            };
+
+            const saveEditHabit = () => {
+                if (!editForm.name.trim()) return;
+                setHabits(habits.map(h => 
+                    h.id === editingHabit 
+                        ? { ...h, ...editForm }
+                        : h
+                ));
+                setEditingHabit(null);
+            };
+
+            const toggleEditDay = (day) => {
+                const days = editForm.selectedDays;
+                if (days.includes(day)) {
+                    setEditForm({...editForm, selectedDays: days.filter(d => d !== day)});
+                } else {
+                    setEditForm({...editForm, selectedDays: [...days, day]});
+                }
             };
 
             const openCompletionModal = (habit) => {
@@ -391,7 +438,7 @@
                                             <button onClick={() => setCompletionValue(showCompletionModal.targetValue)} className="bg-blue-600 py-2 rounded-lg text-sm text-white">Цель</button>
                                             <button onClick={() => setCompletionValue(Math.floor(showCompletionModal.targetValue * 1.5))} className="bg-green-600 py-2 rounded-lg text-sm text-white">Больше</button>
                                         </div>
-                                        <button onClick={completeHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base">Сохранить</button>
+                                        <button onClick={completeHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-sm">Сохранить</button>
                                     </>
                                 )}
                             </div>
@@ -407,6 +454,79 @@
                                     <button onClick={deleteHabit} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-medium">Удалить</button>
                                     <button onClick={() => setConfirmDelete(null)} className={`flex-1 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} py-3 rounded-xl font-medium`}>Отмена</button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Edit Habit Modal - копия Add Form но для редактирования */}
+                    {editingHabit && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
+                            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-xl font-bold">Редактировать привычку</h3>
+                                    <button onClick={() => setEditingHabit(null)} className="p-2"><div className="w-6 h-6"><X /></div></button>
+                                </div>
+
+                                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} placeholder="Название привычки" className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} />
+                                <select value={editForm.category} onChange={(e) => setEditForm({...editForm, category: e.target.value})} className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`}>
+                                    {categories.map(cat => <option key={cat} value={cat}>{categoryIcons[cat]} {cat}</option>)}
+                                </select>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2">Тип метрики *</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            {type: 'check', icon: '✓', label: 'Галочка', value: 1},
+                                            {type: 'count', icon: '🔢', label: 'Количество', value: 8},
+                                            {type: 'time', icon: '⏱️', label: 'Время (мин)', value: 30},
+                                            {type: 'distance', icon: '📏', label: 'Расстояние (км)', value: 5}
+                                        ].map(m => (
+                                            <button key={m.type} type="button" onClick={() => setEditForm({...editForm, metricType: m.type, targetValue: m.value})} className={`p-3 rounded-xl text-center transition-all ${editForm.metricType === m.type ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                                <div className="text-2xl mb-1">{m.icon}</div><div className="text-sm">{m.label}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {editForm.metricType !== 'check' && (
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Целевое значение</label>
+                                        <input type="number" value={editForm.targetValue} onChange={(e) => setEditForm({...editForm, targetValue: Number(e.target.value)})} min="1" className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} />
+                                        {editForm.metricType === 'count' && (
+                                            <input type="text" value={editForm.unit} onChange={(e) => setEditForm({...editForm, unit: e.target.value})} placeholder="Единица (стаканов, раз...)" className={`w-full px-4 py-3 rounded-xl mt-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} />
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2">Повторение *</label>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={() => setEditForm({...editForm, frequency: 'daily', selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']})} className={`flex-1 py-3 rounded-xl transition-all ${editForm.frequency === 'daily' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>Ежедневно</button>
+                                        <button type="button" onClick={() => setEditForm({...editForm, frequency: 'weekly'})} className={`flex-1 py-3 rounded-xl transition-all ${editForm.frequency === 'weekly' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>Выбрать дни</button>
+                                    </div>
+                                </div>
+
+                                {editForm.frequency === 'weekly' && (
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Дни недели</label>
+                                        <div className="flex gap-2">
+                                            {weekDays.map(day => (
+                                                <button key={day} type="button" onClick={() => toggleEditDay(day)} className={`flex-1 py-2 rounded-lg transition-all ${editForm.selectedDays.includes(day) ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>{day}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2">Цвет</label>
+                                    <div className="grid grid-cols-6 gap-2">
+                                        {habitColors.map(color => (
+                                            <button key={color.value} type="button" onClick={() => setEditForm({...editForm, color: color.value})} className={`w-full aspect-square rounded-lg transition-all ${editForm.color === color.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`} style={{backgroundColor: color.value}} />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button onClick={saveEditHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-sm">Сохранить изменения</button>
                             </div>
                         </div>
                     )}
@@ -522,9 +642,16 @@
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <button onClick={() => setConfirmDelete(habit.id)} className="text-gray-400 hover:text-red-500 p-3 -m-2 transition-colors active:scale-95">
-                                                        <div className="w-6 h-6"><Trash2 /></div>
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => openEditModal(habit)} className="text-gray-400 hover:text-blue-500 p-3 -m-2 transition-colors active:scale-95">
+                                                            <div className="w-6 h-6">
+                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                            </div>
+                                                        </button>
+                                                        <button onClick={() => setConfirmDelete(habit.id)} className="text-gray-400 hover:text-red-500 p-3 -m-2 transition-colors active:scale-95">
+                                                            <div className="w-6 h-6"><Trash2 /></div>
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 {habit.metricType !== 'check' && todayCompletion && (
@@ -536,23 +663,23 @@
                                                 <div className="flex gap-2">
                                                     {todayCompletion ? (
                                                         <>
-                                                            <button onClick={() => openCompletionModal(habit)} className="flex-1 py-4 rounded-xl font-medium text-base transition-all flex items-center justify-center gap-2 bg-blue-600 text-white active:scale-95">
-                                                                <div className="w-5 h-5"><Check /></div>
+                                                            <button onClick={() => openCompletionModal(habit)} className="flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white active:scale-95">
+                                                                <div className="w-4 h-4"><Check /></div>
                                                                 Изменить
                                                             </button>
-                                                            <button onClick={() => cancelCompletion(habit.id)} className="flex-1 py-4 rounded-xl font-medium text-base transition-all flex items-center justify-center gap-2 bg-red-600 text-white active:scale-95">
-                                                                <div className="w-5 h-5"><X /></div>
+                                                            <button onClick={() => cancelCompletion(habit.id)} className="flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-1.5 bg-red-600 text-white active:scale-95">
+                                                                <div className="w-4 h-4"><X /></div>
                                                                 Отменить
                                                             </button>
                                                         </>
                                                     ) : (
-                                                        <button onClick={() => openCompletionModal(habit)} className="flex-1 py-4 rounded-xl font-medium text-base transition-all flex items-center justify-center gap-2 text-white active:scale-95" style={{backgroundColor: habit.color}}>
+                                                        <button onClick={() => openCompletionModal(habit)} className="flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 text-white active:scale-95" style={{backgroundColor: habit.color}}>
                                                             <div className="w-5 h-5"><Target /></div>
                                                             Отметить
                                                         </button>
                                                     )}
-                                                    <button onClick={() => setExpandedHabit(isExpanded ? null : habit.id)} className={`px-5 py-4 rounded-xl font-medium text-base ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} transition-colors active:scale-95`}>
-                                                        <div className="w-5 h-5"><Calendar /></div>
+                                                    <button onClick={() => setExpandedHabit(isExpanded ? null : habit.id)} className={`px-4 py-3 rounded-xl font-medium text-sm ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} transition-colors active:scale-95`}>
+                                                        <div className="w-4 h-4"><Calendar /></div>
                                                     </button>
                                                 </div>
                                             </div>
