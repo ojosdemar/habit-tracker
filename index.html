@@ -3,100 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Habit Tracker V2</title>
+    <title>Habit Tracker Local</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     </style>
+    <script>
+        // Скрыть предупреждение Tailwind CDN
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0]?.includes?.('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBAoNhwGFQtNKMw9jD-sURFVBoG3zvh4yw",
-            authDomain: "habit-tracker-4216c.firebaseapp.com",
-            projectId: "habit-tracker-4216c",
-            storageBucket: "habit-tracker-4216c.firebasestorage.app",
-            messagingSenderId: "1096663784847",
-            appId: "1:1096663784847:web:e9cd0cd1c5c71f6cf47ffa"
-        };
-
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // Icons (simplified SVG components)
+        // Icons
         const Plus = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
         const X = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
         const Check = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
         const Trash2 = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
-        const Edit2 = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const Download = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const Upload = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+        const Settings = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-4.242 0l-4.243 4.243m12.728 0l-4.242-4.243m-4.243 0L3.636 17.364"/></svg>;
+        const HelpCircle = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
         const Sun = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>;
         const Moon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
-        const LogOut = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
         const Calendar = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
         const Target = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 
-        // Auth Screen
-        function AuthScreen() {
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
+        // LocalStorage utilities
+        const saveToLocal = (key, data) => {
+            localStorage.setItem(key, JSON.stringify(data));
+        };
 
-            const signInWithGoogle = async () => {
-                try {
-                    setLoading(true);
-                    setError('');
-                    const provider = new firebase.auth.GoogleAuthProvider();
-                    await auth.signInWithPopup(provider);
-                } catch (err) {
-                    console.error('Auth error:', err);
-                    setError('Ошибка входа. Попробуйте снова.');
-                } finally {
-                    setLoading(false);
-                }
-            };
+        const loadFromLocal = (key, defaultValue = null) => {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        };
 
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
-                        <div className="text-center mb-8">
-                            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-4xl mx-auto mb-4">✓</div>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">Habit Tracker V2</h1>
-                            <p className="text-gray-600">С целями и временем выполнения</p>
-                        </div>
-                        <button onClick={signInWithGoogle} disabled={loading} className="w-full bg-white border-2 border-gray-300 text-gray-700 py-4 rounded-xl font-medium flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                            {loading ? 'Загрузка...' : (
-                                <>
-                                    <svg width="20" height="20" viewBox="0 0 24 24">
-                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                    </svg>
-                                    Войти через Google
-                                </>
-                            )}
-                        </button>
-                        {error && <div className="text-red-500 text-sm text-center mt-4">{error}</div>}
-                    </div>
-                </div>
-            );
-        }
-
-        // Main App
         function HabitTracker() {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
             const [habits, setHabits] = useState([]);
             const [isDark, setIsDark] = useState(true);
             const [showAddForm, setShowAddForm] = useState(false);
@@ -104,15 +58,22 @@
             const [confirmDelete, setConfirmDelete] = useState(null);
             const [showCompletionModal, setShowCompletionModal] = useState(null);
             const [completionValue, setCompletionValue] = useState(1);
+            const [showSettings, setShowSettings] = useState(false);
+            const [showHelp, setShowHelp] = useState(false);
+            const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
+            
+            const [settings, setSettings] = useState({
+                // Убрали Telegram настройки
+            });
             
             const [newHabit, setNewHabit] = useState({
                 name: '',
                 category: 'Учёба',
                 color: '#667eea',
-                metricType: 'check', // check, count, time, distance
+                metricType: 'check',
                 targetValue: 1,
                 unit: '',
-                frequency: 'daily', // daily, weekly
+                frequency: 'daily',
                 selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
             });
 
@@ -128,29 +89,57 @@
             ];
             const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-            // Auth listener
+            // Load data on mount
             useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged((user) => {
-                    setUser(user);
-                    setLoading(false);
-                });
-                return () => unsubscribe();
+                const savedHabits = loadFromLocal('habits', []);
+                const isFirstTime = loadFromLocal('isFirstTime', true);
+                
+                setHabits(savedHabits);
+                
+                if (isFirstTime) {
+                    setShowFirstTimeModal(true);
+                    saveToLocal('isFirstTime', false);
+                }
             }, []);
 
-            // Load habits
+            // Save habits when changed
             useEffect(() => {
-                if (!user) {
-                    setHabits([]);
-                    return;
+                if (habits.length > 0) {
+                    saveToLocal('habits', habits);
                 }
-                const unsubscribe = db.collection('users').doc(user.uid).collection('habits')
-                    .orderBy('createdAt', 'desc')
-                    .onSnapshot((snapshot) => {
-                        const habitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setHabits(habitsData);
-                    });
-                return () => unsubscribe();
-            }, [user]);
+            }, [habits]);
+
+            const exportData = () => {
+                const data = {
+                    habits,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.habits) setHabits(data.habits);
+                        alert('✅ Данные успешно импортированы!');
+                    } catch (err) {
+                        alert('❌ Ошибка импорта данных');
+                    }
+                };
+                reader.readAsText(file);
+            };
 
             const getUnitLabel = (habit) => {
                 if (habit.metricType === 'check') return '';
@@ -160,29 +149,22 @@
                 return '';
             };
 
-            const addHabit = async () => {
-                if (!newHabit.name.trim() || !user) return;
-                try {
-                    await db.collection('users').doc(user.uid).collection('habits').add({
-                        ...newHabit,
-                        completedDates: [],
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    setNewHabit({ name: '', category: 'Учёба', color: '#667eea', metricType: 'check', targetValue: 1, unit: '', frequency: 'daily', selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] });
-                    setShowAddForm(false);
-                } catch (err) {
-                    console.error('Error adding habit:', err);
-                }
+            const addHabit = () => {
+                if (!newHabit.name.trim()) return;
+                const habit = {
+                    ...newHabit,
+                    id: Date.now(),
+                    completedDates: [],
+                    createdAt: new Date().toISOString()
+                };
+                setHabits([...habits, habit]);
+                setNewHabit({ name: '', category: 'Учёба', color: '#667eea', metricType: 'check', targetValue: 1, unit: '', frequency: 'daily', selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] });
+                setShowAddForm(false);
             };
 
-            const deleteHabit = async () => {
-                if (!user || !confirmDelete) return;
-                try {
-                    await db.collection('users').doc(user.uid).collection('habits').doc(confirmDelete).delete();
-                    setConfirmDelete(null);
-                } catch (err) {
-                    console.error('Error deleting habit:', err);
-                }
+            const deleteHabit = () => {
+                setHabits(habits.filter(h => h.id !== confirmDelete));
+                setConfirmDelete(null);
             };
 
             const openCompletionModal = (habit) => {
@@ -190,8 +172,8 @@
                 setCompletionValue(habit.targetValue || 1);
             };
 
-            const completeHabit = async () => {
-                if (!user || !showCompletionModal) return;
+            const completeHabit = () => {
+                if (!showCompletionModal) return;
                 const habit = showCompletionModal;
                 const now = new Date();
                 const dateStr = now.toDateString();
@@ -204,37 +186,25 @@
                     percentage: Math.round((completionValue / habit.targetValue) * 100)
                 };
 
-                try {
-                    const habitDoc = await db.collection('users').doc(user.uid).collection('habits').doc(habit.id).get();
-                    const currentCompletions = habitDoc.data().completedDates || [];
-                    const todayIndex = currentCompletions.findIndex(c => c.date === dateStr);
-                    
-                    let updatedCompletions;
+                setHabits(habits.map(h => {
+                    if (h.id !== habit.id) return h;
+                    const completions = h.completedDates || [];
+                    const todayIndex = completions.findIndex(c => c.date === dateStr);
                     if (todayIndex >= 0) {
-                        updatedCompletions = [...currentCompletions];
-                        updatedCompletions[todayIndex] = completionData;
+                        completions[todayIndex] = completionData;
                     } else {
-                        updatedCompletions = [...currentCompletions, completionData];
+                        completions.push(completionData);
                     }
-                    
-                    await db.collection('users').doc(user.uid).collection('habits').doc(habit.id).update({
-                        completedDates: updatedCompletions
-                    });
-                    
-                    setShowCompletionModal(null);
-                    setCompletionValue(1);
-                } catch (err) {
-                    console.error('Error completing habit:', err);
-                }
+                    return { ...h, completedDates: completions };
+                }));
+                
+                setShowCompletionModal(null);
+                setCompletionValue(1);
             };
 
             const getTodayCompletion = (habit) => {
                 const today = new Date().toDateString();
                 return (habit.completedDates || []).find(c => c.date === today);
-            };
-
-            const isCompletedOnDate = (habit, date) => {
-                return (habit.completedDates || []).some(c => c.date === date.toDateString());
             };
 
             const getCompletionOnDate = (habit, date) => {
@@ -251,14 +221,6 @@
                 return days;
             };
 
-            const getMonthlyCompletion = (habit) => {
-                const monthDays = getCurrentMonthDays();
-                const today = new Date();
-                const daysPassedInMonth = today.getDate();
-                const completedInMonth = monthDays.filter(day => day <= today && isCompletedOnDate(habit, day)).length;
-                return daysPassedInMonth > 0 ? Math.round((completedInMonth / daysPassedInMonth) * 100) : 0;
-            };
-
             const toggleDay = (day) => {
                 const days = newHabit.selectedDays;
                 if (days.includes(day)) {
@@ -268,16 +230,6 @@
                 }
             };
 
-            if (loading) {
-                return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><div className="text-white text-xl">Загрузка...</div></div>;
-            }
-
-            if (!user) {
-                return <AuthScreen />;
-            }
-
-            const userName = user.displayName || user.email?.split('@')[0] || 'Пользователь';
-            const userPhoto = user.photoURL;
             const monthDays = getCurrentMonthDays();
 
             return (
@@ -285,36 +237,115 @@
                     {/* Header */}
                     <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-50`}>
                         <div className="px-4 py-3 flex items-center justify-between">
+                            <h1 className="text-lg font-bold">📊 Habit Tracker</h1>
                             <div className="flex items-center gap-2">
-                                {userPhoto ? (
-                                    <img src={userPhoto} alt={userName} className="w-9 h-9 rounded-full" />
-                                ) : (
-                                    <div className="w-9 h-9 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                        {userName[0].toUpperCase()}
-                                    </div>
-                                )}
-                                <h1 className="text-lg font-bold">Habit Tracker V2</h1>
-                            </div>
-                            <div className="flex items-center gap-2">
+                                <button onClick={() => setShowHelp(true)} className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <div className="w-5 h-5"><HelpCircle /></div>
+                                </button>
+                                <button onClick={() => setShowSettings(true)} className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <div className="w-5 h-5"><Settings /></div>
+                                </button>
                                 <button onClick={() => setIsDark(!isDark)} className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                     <div className="w-5 h-5">{isDark ? <Sun /> : <Moon />}</div>
-                                </button>
-                                <button onClick={() => auth.signOut()} className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                    <div className="w-5 h-5"><LogOut /></div>
                                 </button>
                             </div>
                         </div>
                     </header>
 
-                    {/* Completion Modal */}
+                    {/* First Time Modal */}
+                    {showFirstTimeModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+                            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 max-w-md w-full`}>
+                                <h2 className="text-2xl font-bold mb-4">👋 Добро пожаловать!</h2>
+                                <div className="space-y-3 text-sm mb-6">
+                                    <p>💾 <strong>Данные хранятся на устройстве</strong></p>
+                                    <p>⚠️ При переустановке приложения данные будут удалены</p>
+                                    <p>✅ <strong>Рекомендация:</strong> Регулярно делайте резервную копию данных через кнопку "Экспорт" в настройках</p>
+                                </div>
+                                <button onClick={() => setShowFirstTimeModal(false)} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-medium">
+                                    Понятно!
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settings Modal */}
+                    {showSettings && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4 overflow-y-auto">
+                            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 max-w-md w-full my-8`}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-xl font-bold">Настройки</h3>
+                                    <button onClick={() => setShowSettings(false)} className="p-2"><div className="w-6 h-6"><X /></div></button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Export/Import */}
+                                    <div>
+                                        <h4 className="font-bold mb-2 flex items-center gap-2"><Download /> Резервная копия</h4>
+                                        <div className="flex gap-2">
+                                            <button onClick={exportData} className="flex-1 bg-blue-600 py-3 rounded-xl flex items-center justify-center gap-2">
+                                                <Download />Экспорт данных
+                                            </button>
+                                            <label className="flex-1 bg-green-600 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
+                                                <Upload />Импорт данных
+                                                <input type="file" accept=".json" onChange={importData} className="hidden" />
+                                            </label>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-2">💡 Сохраняйте резервную копию перед переустановкой!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Help Modal */}
+                    {showHelp && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4 overflow-y-auto">
+                            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 max-w-md w-full my-8`}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-xl font-bold">❓ Помощь</h3>
+                                    <button onClick={() => setShowHelp(false)} className="p-2"><div className="w-6 h-6"><X /></div></button>
+                                </div>
+
+                                <div className="space-y-4 text-sm">
+                                    <div>
+                                        <h4 className="font-bold mb-2">💾 Резервное копирование</h4>
+                                        <ol className="list-decimal list-inside space-y-1 text-gray-400">
+                                            <li>Нажмите "Настройки" → "Экспорт данных"</li>
+                                            <li>Сохраните JSON файл</li>
+                                            <li>При переустановке: "Импорт данных" → выберите файл</li>
+                                        </ol>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-bold mb-2">📊 Типы метрик</h4>
+                                        <ul className="space-y-1 text-gray-400">
+                                            <li>✓ <strong>Галочка</strong> - просто отметить</li>
+                                            <li>🔢 <strong>Количество</strong> - счетчик (стаканы, отжимания)</li>
+                                            <li>⏱️ <strong>Время</strong> - в минутах</li>
+                                            <li>📏 <strong>Расстояние</strong> - в километрах</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-bold mb-2">📅 Частота повторения</h4>
+                                        <ul className="space-y-1 text-gray-400">
+                                            <li><strong>Ежедневно</strong> - каждый день</li>
+                                            <li><strong>Выбрать дни</strong> - конкретные дни недели</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Other modals (Completion, Delete, Add Form) - same as before */}
                     {showCompletionModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
                             <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 w-full max-w-md`}>
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-xl font-bold">Отметить выполнение</h3>
-                                    <button onClick={() => setShowCompletionModal(null)} className="p-2">
-                                        <div className="w-6 h-6"><X /></div>
-                                    </button>
+                                    <button onClick={() => setShowCompletionModal(null)} className="p-2"><div className="w-6 h-6"><X /></div></button>
                                 </div>
 
                                 <div className="mb-4">
@@ -332,19 +363,12 @@
                                 </div>
 
                                 {showCompletionModal.metricType === 'check' ? (
-                                    <button 
-                                        onClick={completeHabit}
-                                        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base"
-                                    >
-                                        <div className="flex items-center justify-center gap-2">
-                                            <Check />
-                                            Выполнено!
-                                        </div>
+                                    <button onClick={completeHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base">
+                                        <div className="flex items-center justify-center gap-2"><Check />Выполнено!</div>
                                     </button>
                                 ) : (
                                     <>
                                         <div className="mb-4">
-                                            <label className="block text-sm text-gray-400 mb-2">Значение</label>
                                             <input 
                                                 type="number" 
                                                 value={completionValue}
@@ -352,49 +376,19 @@
                                                 min="0"
                                                 className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-100'} text-center text-2xl font-bold px-4 py-3 rounded-xl outline-none`}
                                             />
-                                            <div className="text-center text-sm text-gray-400 mt-1">
-                                                {getUnitLabel(showCompletionModal)}
-                                            </div>
                                         </div>
-
                                         <div className="grid grid-cols-3 gap-2 mb-4">
-                                            <button 
-                                                onClick={() => setCompletionValue(Math.floor(showCompletionModal.targetValue / 2))}
-                                                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} py-2 rounded-lg text-sm`}
-                                            >
-                                                Половина
-                                            </button>
-                                            <button 
-                                                onClick={() => setCompletionValue(showCompletionModal.targetValue)}
-                                                className="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm text-white"
-                                            >
-                                                Цель
-                                            </button>
-                                            <button 
-                                                onClick={() => setCompletionValue(Math.floor(showCompletionModal.targetValue * 1.5))}
-                                                className="bg-green-600 hover:bg-green-700 py-2 rounded-lg text-sm text-white"
-                                            >
-                                                Больше
-                                            </button>
+                                            <button onClick={() => setCompletionValue(Math.floor(showCompletionModal.targetValue / 2))} className={`${isDark ? 'bg-gray-700' : 'bg-gray-200'} py-2 rounded-lg text-sm`}>Половина</button>
+                                            <button onClick={() => setCompletionValue(showCompletionModal.targetValue)} className="bg-blue-600 py-2 rounded-lg text-sm text-white">Цель</button>
+                                            <button onClick={() => setCompletionValue(Math.floor(showCompletionModal.targetValue * 1.5))} className="bg-green-600 py-2 rounded-lg text-sm text-white">Больше</button>
                                         </div>
-
-                                        <button 
-                                            onClick={completeHabit}
-                                            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base"
-                                        >
-                                            Сохранить
-                                        </button>
+                                        <button onClick={completeHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium text-base">Сохранить</button>
                                     </>
                                 )}
-
-                                <div className="mt-3 text-center text-sm text-gray-400">
-                                    📅 {new Date().toLocaleDateString('ru-RU')} | ⏰ {new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
-                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Delete Confirmation */}
                     {confirmDelete && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
                             <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 w-full max-w-sm`}>
@@ -408,7 +402,6 @@
                         </div>
                     )}
 
-                    {/* Add Habit Form */}
                     {showAddForm && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]">
                             <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
@@ -417,147 +410,68 @@
                                     <button onClick={() => setShowAddForm(false)} className="p-2"><div className="w-6 h-6"><X /></div></button>
                                 </div>
 
-                                <input 
-                                    type="text" 
-                                    value={newHabit.name} 
-                                    onChange={(e) => setNewHabit({...newHabit, name: e.target.value})} 
-                                    placeholder="Название привычки" 
-                                    className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} 
-                                    autoFocus 
-                                />
-
-                                <select 
-                                    value={newHabit.category} 
-                                    onChange={(e) => setNewHabit({...newHabit, category: e.target.value})} 
-                                    className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`}
-                                >
+                                <input type="text" value={newHabit.name} onChange={(e) => setNewHabit({...newHabit, name: e.target.value})} placeholder="Название привычки" className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} autoFocus />
+                                <select value={newHabit.category} onChange={(e) => setNewHabit({...newHabit, category: e.target.value})} className={`w-full px-4 py-3 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`}>
                                     {categories.map(cat => <option key={cat} value={cat}>{categoryIcons[cat]} {cat}</option>)}
                                 </select>
 
-                                {/* Metric Type */}
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium mb-2">Тип метрики *</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, metricType: 'check', targetValue: 1})}
-                                            className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'check' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            <div className="text-2xl mb-1">✓</div>
-                                            <div className="text-sm">Галочка</div>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, metricType: 'check', targetValue: 1})} className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'check' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                            <div className="text-2xl mb-1">✓</div><div className="text-sm">Галочка</div>
                                         </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, metricType: 'count', targetValue: 8})}
-                                            className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'count' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            <div className="text-2xl mb-1">🔢</div>
-                                            <div className="text-sm">Количество</div>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, metricType: 'count', targetValue: 8})} className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'count' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                            <div className="text-2xl mb-1">🔢</div><div className="text-sm">Количество</div>
                                         </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, metricType: 'time', targetValue: 30})}
-                                            className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'time' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            <div className="text-2xl mb-1">⏱️</div>
-                                            <div className="text-sm">Время (мин)</div>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, metricType: 'time', targetValue: 30})} className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'time' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                            <div className="text-2xl mb-1">⏱️</div><div className="text-sm">Время (мин)</div>
                                         </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, metricType: 'distance', targetValue: 5})}
-                                            className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'distance' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            <div className="text-2xl mb-1">📏</div>
-                                            <div className="text-sm">Расстояние (км)</div>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, metricType: 'distance', targetValue: 5})} className={`p-3 rounded-xl text-center transition-all ${newHabit.metricType === 'distance' ? 'bg-slate-600 ring-2 ring-slate-400' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                            <div className="text-2xl mb-1">📏</div><div className="text-sm">Расстояние (км)</div>
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Target Value */}
                                 {newHabit.metricType !== 'check' && (
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium mb-2">Целевое значение</label>
-                                        <input 
-                                            type="number" 
-                                            value={newHabit.targetValue}
-                                            onChange={(e) => setNewHabit({...newHabit, targetValue: Number(e.target.value)})}
-                                            min="1"
-                                            className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`}
-                                        />
+                                        <input type="number" value={newHabit.targetValue} onChange={(e) => setNewHabit({...newHabit, targetValue: Number(e.target.value)})} min="1" className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} />
                                         {newHabit.metricType === 'count' && (
-                                            <input 
-                                                type="text" 
-                                                value={newHabit.unit}
-                                                onChange={(e) => setNewHabit({...newHabit, unit: e.target.value})}
-                                                placeholder="Единица (стаканов, раз...)"
-                                                className={`w-full px-4 py-3 rounded-xl mt-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`}
-                                            />
+                                            <input type="text" value={newHabit.unit} onChange={(e) => setNewHabit({...newHabit, unit: e.target.value})} placeholder="Единица (стаканов, раз...)" className={`w-full px-4 py-3 rounded-xl mt-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} outline-none`} />
                                         )}
                                     </div>
                                 )}
 
-                                {/* Frequency */}
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium mb-2">Повторение *</label>
                                     <div className="flex gap-2">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, frequency: 'daily', selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']})}
-                                            className={`flex-1 py-3 rounded-xl transition-all ${newHabit.frequency === 'daily' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            Ежедневно
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setNewHabit({...newHabit, frequency: 'weekly'})}
-                                            className={`flex-1 py-3 rounded-xl transition-all ${newHabit.frequency === 'weekly' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                        >
-                                            Выбрать дни
-                                        </button>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, frequency: 'daily', selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']})} className={`flex-1 py-3 rounded-xl transition-all ${newHabit.frequency === 'daily' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>Ежедневно</button>
+                                        <button type="button" onClick={() => setNewHabit({...newHabit, frequency: 'weekly'})} className={`flex-1 py-3 rounded-xl transition-all ${newHabit.frequency === 'weekly' ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>Выбрать дни</button>
                                     </div>
                                 </div>
 
-                                {/* Days Selection */}
                                 {newHabit.frequency === 'weekly' && (
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium mb-2">Дни недели</label>
                                         <div className="flex gap-2">
                                             {weekDays.map(day => (
-                                                <button 
-                                                    key={day}
-                                                    type="button"
-                                                    onClick={() => toggleDay(day)}
-                                                    className={`flex-1 py-2 rounded-lg transition-all ${newHabit.selectedDays.includes(day) ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                                >
-                                                    {day}
-                                                </button>
+                                                <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 py-2 rounded-lg transition-all ${newHabit.selectedDays.includes(day) ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>{day}</button>
                                             ))}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Color */}
                                 <div className="mb-4">
-                                    <label className="block text-sm font-medium mb-2">Цвет привычки</label>
+                                    <label className="block text-sm font-medium mb-2">Цвет</label>
                                     <div className="grid grid-cols-6 gap-2">
                                         {habitColors.map(color => (
-                                            <button 
-                                                key={color.value} 
-                                                type="button"
-                                                onClick={() => setNewHabit({...newHabit, color: color.value})} 
-                                                className={`w-full aspect-square rounded-lg transition-all ${newHabit.color === color.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`} 
-                                                style={{backgroundColor: color.value}} 
-                                            />
+                                            <button key={color.value} type="button" onClick={() => setNewHabit({...newHabit, color: color.value})} className={`w-full aspect-square rounded-lg transition-all ${newHabit.color === color.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`} style={{backgroundColor: color.value}} />
                                         ))}
                                     </div>
                                 </div>
 
-                                <button 
-                                    onClick={addHabit} 
-                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium"
-                                >
-                                    Создать привычку
-                                </button>
+                                <button onClick={addHabit} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-medium">Создать привычку</button>
                             </div>
                         </div>
                     )}
@@ -565,7 +479,7 @@
                     {/* Main Content */}
                     <div className="px-4 py-4 pb-24">
                         <div className="mb-4">
-                            <h2 className="text-2xl font-bold mb-1">Привет, {userName}! 👋</h2>
+                            <h2 className="text-2xl font-bold mb-1">Привет! 👋</h2>
                             <p className="text-sm text-gray-400">Привычек: {habits.length}</p>
                         </div>
 
@@ -580,7 +494,6 @@
                                 {habits.map(habit => {
                                     const isExpanded = expandedHabit === habit.id;
                                     const todayCompletion = getTodayCompletion(habit);
-                                    const completion = getMonthlyCompletion(habit);
                                     
                                     return (
                                         <div key={habit.id} className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl overflow-hidden`} style={{borderLeft: `4px solid ${habit.color}`}}>
@@ -591,16 +504,12 @@
                                                         <h4 className="font-semibold text-base mb-1">{habit.name}</h4>
                                                         <p className="text-xs text-gray-400">
                                                             {habit.category}
-                                                            {habit.metricType !== 'check' && 
-                                                                ` • Цель: ${habit.targetValue} ${getUnitLabel(habit)}`
-                                                            }
+                                                            {habit.metricType !== 'check' && ` • Цель: ${habit.targetValue} ${getUnitLabel(habit)}`}
                                                         </p>
                                                         {todayCompletion && (
                                                             <p className="text-xs text-green-400 mt-1">
                                                                 ✓ Сегодня в {todayCompletion.time}
-                                                                {habit.metricType !== 'check' && 
-                                                                    ` • ${todayCompletion.value}/${habit.targetValue} (${todayCompletion.percentage}%)`
-                                                                }
+                                                                {habit.metricType !== 'check' && ` • ${todayCompletion.value}/${habit.targetValue} (${todayCompletion.percentage}%)`}
                                                             </p>
                                                         )}
                                                     </div>
@@ -611,29 +520,16 @@
 
                                                 {habit.metricType !== 'check' && todayCompletion && (
                                                     <div className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mb-4`}>
-                                                        <div 
-                                                            className="h-2 rounded-full transition-all duration-500" 
-                                                            style={{
-                                                                width: `${Math.min(todayCompletion.percentage, 100)}%`, 
-                                                                backgroundColor: habit.color
-                                                            }} 
-                                                        />
+                                                        <div className="h-2 rounded-full transition-all duration-500" style={{width: `${Math.min(todayCompletion.percentage, 100)}%`, backgroundColor: habit.color}} />
                                                     </div>
                                                 )}
 
                                                 <div className="flex gap-2">
-                                                    <button 
-                                                        onClick={() => openCompletionModal(habit)} 
-                                                        className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${todayCompletion ? 'bg-green-500 text-white' : 'text-white'}`}
-                                                        style={{backgroundColor: todayCompletion ? undefined : habit.color}}
-                                                    >
+                                                    <button onClick={() => openCompletionModal(habit)} className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${todayCompletion ? 'bg-green-500 text-white' : 'text-white'}`} style={{backgroundColor: todayCompletion ? undefined : habit.color}}>
                                                         <div className="w-5 h-5">{todayCompletion ? <Check /> : <Target />}</div>
                                                         {todayCompletion ? 'Изменить' : 'Отметить'}
                                                     </button>
-                                                    <button 
-                                                        onClick={() => setExpandedHabit(isExpanded ? null : habit.id)} 
-                                                        className={`px-4 py-3 rounded-xl font-medium text-sm ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-                                                    >
+                                                    <button onClick={() => setExpandedHabit(isExpanded ? null : habit.id)} className={`px-4 py-3 rounded-xl font-medium text-sm ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                                                         <div className="w-4 h-4"><Calendar /></div>
                                                     </button>
                                                 </div>
@@ -641,28 +537,16 @@
 
                                             {isExpanded && (
                                                 <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} p-4`}>
-                                                    <h5 className="text-sm font-medium mb-3 text-gray-400">
-                                                        {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
-                                                    </h5>
+                                                    <h5 className="text-sm font-medium mb-3 text-gray-400">{new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</h5>
                                                     <div className="grid grid-cols-7 gap-1.5">
                                                         {monthDays.map((day, idx) => {
                                                             const dayCompletion = getCompletionOnDate(habit, day);
                                                             const isToday = day.toDateString() === new Date().toDateString();
                                                             
                                                             return (
-                                                                <div 
-                                                                    key={idx} 
-                                                                    className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-medium ${isToday ? 'ring-2' : ''}`}
-                                                                    style={{
-                                                                        backgroundColor: dayCompletion ? habit.color : (isDark ? '#374151' : '#e5e7eb'),
-                                                                        color: dayCompletion ? 'white' : undefined,
-                                                                        borderColor: isToday ? habit.color : undefined
-                                                                    }}
-                                                                >
+                                                                <div key={idx} className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-medium ${isToday ? 'ring-2' : ''}`} style={{backgroundColor: dayCompletion ? habit.color : (isDark ? '#374151' : '#e5e7eb'), color: dayCompletion ? 'white' : undefined, borderColor: isToday ? habit.color : undefined}}>
                                                                     <div>{day.getDate()}</div>
-                                                                    {dayCompletion && dayCompletion.time && (
-                                                                        <div className="text-[8px] opacity-75">{dayCompletion.time}</div>
-                                                                    )}
+                                                                    {dayCompletion && dayCompletion.time && <div className="text-[8px] opacity-75">{dayCompletion.time}</div>}
                                                                 </div>
                                                             );
                                                         })}
@@ -676,37 +560,14 @@
                         )}
                     </div>
 
-                    {/* Add Button */}
-                    <button 
-                        onClick={() => setShowAddForm(true)} 
-                        className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40"
-                    >
+                    <button onClick={() => setShowAddForm(true)} className="fixed right-5 bottom-5 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40">
                         <div className="w-7 h-7"><Plus /></div>
                     </button>
                 </div>
             );
         }
 
-        function App() {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-
-            useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged((user) => {
-                    setUser(user);
-                    setLoading(false);
-                });
-                return () => unsubscribe();
-            }, []);
-
-            if (loading) {
-                return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><div className="text-white text-xl">Загрузка...</div></div>;
-            }
-
-            return user ? <HabitTracker /> : <AuthScreen />;
-        }
-
-        ReactDOM.render(<App />, document.getElementById('root'));
+        ReactDOM.render(<HabitTracker />, document.getElementById('root'));
     </script>
 </body>
 </html>
