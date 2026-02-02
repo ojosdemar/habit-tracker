@@ -10,7 +10,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            /* Адаптивный размер шрифта */
+            font-size: clamp(14px, 2.5vw, 16px);
+        }
+        html {
+            /* Базовый размер относительно ширины экрана */
+            font-size: clamp(14px, 1vw + 12px, 16px);
+        }
+        button {
+            /* Адаптивный размер для кнопок */
+            font-size: clamp(12px, 2vw, 14px);
+        }
+        h1 {
+            font-size: clamp(18px, 4vw, 24px);
+        }
+        h2 {
+            font-size: clamp(20px, 5vw, 32px);
+        }
+        .habit-name {
+            font-size: clamp(14px, 3vw, 16px);
+        }
     </style>
     <script>
         // Скрыть предупреждение Tailwind CDN
@@ -128,31 +149,23 @@
                         version: '2.0'
                     };
                     
-                    console.log('Exporting data:', data);
-                    
+                    const fileName = `habit-tracker-${new Date().toISOString().split('T')[0]}.json`;
                     const jsonStr = JSON.stringify(data, null, 2);
-                    const blob = new Blob([jsonStr], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const fileName = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
                     
-                    // Небольшая задержка перед очисткой
-                    setTimeout(() => {
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    }, 100);
+                    // Простой data URL подход - работает везде
+                    const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
+                    const link = document.createElement('a');
+                    link.href = dataUrl;
+                    link.download = fileName;
+                    link.click();
                     
-                    // Показываем где искать файл
                     setTimeout(() => {
-                        alert(`✅ Файл сохранён!\n\nИмя файла:\n${fileName}\n\nГде искать:\n📁 Загрузки (Downloads)\n📁 Файлы → Загрузки\n\nИли откройте уведомление о загрузке`);
+                        alert(`✅ Экспорт выполнен!\n\nФайл: ${fileName}\n\n📂 Где искать:\nФайлы → Загрузки\nили в уведомлениях`);
                     }, 300);
+                    
                 } catch (err) {
                     console.error('Export error:', err);
-                    alert('❌ Ошибка экспорта: ' + err.message);
+                    alert('❌ Ошибка: ' + err.message);
                 }
             };
 
@@ -678,7 +691,7 @@
                                                 <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
                                                     <div className="text-2xl sm:text-3xl">{categoryIcons[habit.category]}</div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-semibold text-sm sm:text-base mb-1">{habit.name}</h4>
+                                                        <h4 className="habit-name font-semibold mb-1">{habit.name}</h4>
                                                         <p className="text-xs text-gray-400">
                                                             {habit.category}
                                                             {habit.metricType !== 'check' && ` • Цель: ${habit.targetValue} ${getUnitLabel(habit)}`}
@@ -711,13 +724,11 @@
                                                 <div className="flex gap-2">
                                                     {todayCompletion ? (
                                                         <>
-                                                            <button onClick={() => openCompletionModal(habit)} className="flex-1 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 bg-blue-600 text-white active:scale-95">
-                                                                <div className="w-4 h-4 flex-shrink-0"><Check /></div>
-                                                                <span className="hidden xs:inline sm:inline">Изменить</span>
+                                                            <button onClick={() => openCompletionModal(habit)} className="flex-1 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all flex items-center justify-center bg-blue-600 text-white active:scale-95">
+                                                                Изменить
                                                             </button>
-                                                            <button onClick={() => cancelCompletion(habit.id)} className="flex-1 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 bg-red-600 text-white active:scale-95">
-                                                                <div className="w-4 h-4 flex-shrink-0"><X /></div>
-                                                                <span className="hidden xs:inline sm:inline">Отменить</span>
+                                                            <button onClick={() => cancelCompletion(habit.id)} className="flex-1 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all flex items-center justify-center bg-red-600 text-white active:scale-95">
+                                                                Отменить
                                                             </button>
                                                         </>
                                                     ) : (
