@@ -37,7 +37,7 @@ _Примеры_: 5 км бега, 10 км велосипеда, 3 км ходь
 
 ## Установка
 
-APK файл доступен в разделе Actions → Artifacts
+APK файл
 
 ## Технологии
 
@@ -45,3 +45,5 @@ APK файл доступен в разделе Actions → Artifacts
 - Tailwind CSS
 - Capacitor (для Android)
 - GitHub Actions (автоматическая сборка)
+
+  
